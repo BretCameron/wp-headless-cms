@@ -274,7 +274,6 @@ function get_printer_meta_field( $object, $field_name, $value ) {
   return get_post_meta($object['id'])[$field_name][0];
 }
 
-
 // Register Custom Post Type
 function materials_post_type() {
 
@@ -461,6 +460,43 @@ function wpb_change_title_text( $title ){
 add_filter( 'enter_title_here', 'wpb_change_title_text' );
 
 
+// Restrict visible JSON data across all custom post types, to save space
 
-// Create new REST API endpoints
+function my_rest_prepare_post( $data, $post, $request ) {
+	$_data = $data->data;
+	$params = $request->get_params();
+	if ( ! isset( $params['id'] ) ) {
+    unset( $_data['date'] );
+    unset( $_data['slug'] );
+    unset( $_data['date_gmt'] );
+    unset( $_data['modified'] );
+    unset( $_data['modified_gmt'] );
+    unset( $_data['guid'] );
+    unset( $_data['type'] );
+	}
+	$data->data = $_data;
+	return $data;
+}
 
+add_filter( 'rest_prepare_printers', 'my_rest_prepare_post', 10, 3 );
+
+add_filter( 'rest_prepare_materials', 'my_rest_prepare_post', 10, 3 );
+
+add_filter( 'rest_prepare_faq', 'my_rest_prepare_post', 10, 3 );
+
+
+// THIS CODE ADDS IMAGES TO THE REST API
+
+    function post_featured_image_json( $data, $post, $context ) {
+        $featured_image_id = $data->data['featured_media']; // get featured image id
+        $featured_image_url = wp_get_attachment_image_src( $featured_image_id, 'original' ); // get url of the original size
+
+        if( $featured_image_url ) {
+            $data->data['featured_image_url'] = $featured_image_url[0];
+        }
+
+        return $data;
+    }
+
+    add_filter( 'rest_prepare_printers', 'post_featured_image_json', 10, 3 );
+    add_filter( 'rest_prepare_materials', 'post_featured_image_json', 10, 3 );
